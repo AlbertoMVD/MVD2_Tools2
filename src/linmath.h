@@ -189,4 +189,22 @@ namespace lm {
 	quat operator * (const quat& a, float v);
 	quat operator * (const quat& a, const quat& b);
 
+    class Utils {
+    public:
+        template <typename T>
+        static T clamp(const T& lower, const T& upper, const T& n) {
+            return std::max(lower, std::min(n, upper));
+        }
+
+        static float lerp(float a, float b, float f)
+        {
+            return a + f * (b - a);
+        }
+
+        static lm::vec3 lerp(lm::vec3 a, lm::vec3 b, float f)
+        {
+            return a.lerp(b, f);
+        }
+    };
+
 }

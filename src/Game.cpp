@@ -9,6 +9,8 @@
 #include "extern.h"
 #include "Parsers.h"
 
+Game* Game::instance = 0;
+
 Game::Game() {
 
 }

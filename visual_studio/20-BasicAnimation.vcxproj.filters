@@ -32,6 +32,7 @@
     <ClCompile Include="..\src\GUISystem.cpp" />
     <ClCompile Include="..\src\GraphicsUtilities.cpp" />
     <ClCompile Include="..\src\AnimationSystem.cpp" />
+    <ClCompile Include="..\src\CameraSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CollisionSystem.h" />
@@ -75,6 +76,8 @@
     <ClInclude Include="..\src\shaders_default.h" />
     <ClInclude Include="..\src\GraphicsUtilities.h" />
     <ClInclude Include="..\src\AnimationSystem.h" />
+    <ClInclude Include="..\src\CameraSystem.h" />
+    <ClInclude Include="..\src\interpolators.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imGui">

@@ -58,12 +58,16 @@ struct Mesh : public Component {
 // - view and projection matrices for camera
 // - is_main bool so that ECM can quickly find main camera
 struct Camera : public Component {
+
+    lm::vec3 target;
 	lm::vec3 position;
 	lm::vec3 forward;
 	lm::vec3 up;
 	lm::mat4 view_matrix;
 	lm::mat4 projection_matrix;
 	lm::mat4 view_projection;
+
+    float fov, near, far;
 
 	//constructor that sets placeholder matrices
 	Camera() {
@@ -82,13 +86,29 @@ struct Camera : public Component {
 
 	//wraps orthographic projection matrix
 	void setOrthographic(float left, float right, float bottom, float top, float near, float far) {
+
+        this->far = far;
+        this->near = near;
 		projection_matrix.orthographic(left, right, bottom, top, near, far);
 	}
 
 	//wraps perspective projection matrix
 	void setPerspective(float fov_rad, float aspect, float near, float far) {
+
+        this->far = far;
+        this->near = near;
+        this->fov = fov_rad;
 		projection_matrix.perspective(fov_rad, aspect, near, far);
 	}
+
+    //look at by view matrix
+    void lookAt(lm::vec3 pos, lm::vec3 target) {
+
+        position = pos;
+        forward = (target - position).normalize();
+
+        view_matrix.lookAt(position, target, up);
+    }
 
 	void update() {
 		updateViewMatrix();
@@ -271,6 +291,15 @@ struct Entity {
     }
     Entity(std::string a_name) : name(a_name) {
         for (int i = 0; i < NUM_TYPE_COMPONENTS; i++) { components[i] = -1;}
+    }
+
+    // Improve this method, check if entity exists and is initialized.
+    bool isValid()
+    {
+        if (name != "")
+            return true;
+
+        return false;
     }
 };
 

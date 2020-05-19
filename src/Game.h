@@ -18,6 +18,9 @@
 class Game
 {
 public:
+
+    static Game* instance;
+
 	Game();
 	void init(int, int);
 	void update(float dt);
@@ -48,6 +51,9 @@ public:
 	}
 	void update_viewports(int window_width, int window_height);
 
+    int window_width_;
+    int window_height_;
+
 private:
 	GraphicsSystem graphics_system_;
 	ControlSystem control_system_;
@@ -60,8 +66,6 @@ private:
 	int createFreeCamera_();
 	int createPlayer_(float aspect, ControlSystem& sys);
 
-	int window_width_;
-	int window_height_;
 	int mouse_x_;
 	int mouse_y_;
 };

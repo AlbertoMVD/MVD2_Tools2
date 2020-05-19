@@ -1,17 +1,18 @@
 #include "CameraSystem.h"
+#include "Parsers.h"
 #include "extern.h"
+#include "linmath.h"
 #include "Game.h"
 
 CameraSystem::CameraSystem()
-{
-
-}
+{}
 
 bool CameraSystem::init()
 {
     return true;
 }
 
+// Retrieve default and output camera to the system
 bool CameraSystem::lateInit()
 {
     // Set default camera, the one to be used.
@@ -34,9 +35,10 @@ bool CameraSystem::stop()
     return true;
 }
 
-void CameraSystem::update(float dt)
+// Update function, used to blend between gameplay cameras
+void CameraSystem::update(float delta)
 {
-    updateTest(dt);
+    updateTest(delta);
 
     Camera resultCamera;
 
@@ -52,15 +54,14 @@ void CameraSystem::update(float dt)
     }
 
     // Get all the cameras in priority order, so gameplay is first.
-    for (int i = 0; i < NUM_PROPERTIES; ++i)
+    for (int i = 0; i < NUM_PRIORITIES; ++i)
     {
         for (auto& mc : _mixedCameras)
         {
             if (mc.type != i)
                 continue;
 
-            // This part controls when the blending is done after checking the delta time
-            mc.time += dt;
+            mc.time += delta;
             if (mc.state == CameraMixed::ST_BLENDING_IN)
             {
                 mc.weight = lm::Utils::clamp(mc.time / mc.blendInTime, 0.f, 1.f);
@@ -91,33 +92,33 @@ void CameraSystem::update(float dt)
                 c_trans.position(resultCamera.position);
             }
         }
+    }
 
-        // Remove temporal mixed cameras
-        checkDeprecated();
+    // Remove temporal mixed cameras
+    checkDeprecated();
 
-        // remove deprecated ones
+    // remove deprecated ones
+    {
+        std::vector<CameraMixed>::iterator it = _mixedCameras.begin();
+        while (it != _mixedCameras.end())
         {
-            std::vector<CameraMixed>::iterator it = _mixedCameras.begin();
-            while (it != _mixedCameras.end())
-            {
-                if (it->weight <= 0.f)
-                    it = _mixedCameras.erase(it);
-                else
-                    ++it;
-            }
+            if (it->weight <= 0.f)
+                it = _mixedCameras.erase(it);
+            else
+                ++it;
         }
+    }
 
-        // save the result into the main camera (output camera)
-        if (_outputCamera.isValid())
-        {
-            Entity e = _outputCamera;
-            Camera& c_camera = ECS.getComponentFromEntity<Camera>(e.name);
-            blendCameras(&resultCamera, &resultCamera, 1.f, &c_camera);
+    // save the result into the main camera (output camera)
+    if (_outputCamera.isValid())
+    {
+        Entity e = _outputCamera;
+        Camera& c_camera = ECS.getComponentFromEntity<Camera>(e.name);
+        blendCameras(&resultCamera, &resultCamera, 1.f, &c_camera);
 
-            Transform& c_trans = ECS.getComponentFromEntity<Transform>(e.name);
-            c_trans.position(c_camera.position);
-
-        }
+        Transform& c_trans = ECS.getComponentFromEntity<Transform>(e.name);
+        c_trans.position(c_camera.position);
+        
     }
 }
 
@@ -149,25 +150,35 @@ void CameraSystem::checkDeprecated()
     }
 }
 
+// Method for test purposes, make any necessary change here.
 void CameraSystem::updateTest(float dt)
 {
-    // TO-DO
-    // Add lerps and transitions between scene cameras
-    // Create the cinematic code here.
-
-    // Press key 0 and blend to camera1
-    if (Game::instance->control_system_.input[GLFW_KEY_0])
-    {
-        int camera_test_1 = ECS.getEntity("camera_test1");
-        Entity& camera1 = ECS.entities[camera_test_1];
-        blendInCamera(camera1, 2.f, CameraSystem::EPriority::GAMEPLAY);
-        std::cout << "Blending camera zero" << std::endl;
+    if (Game::instance->control_system_.input[GLFW_KEY_0]) {
+        int camera_test_id = ECS.getEntity("camera_test1");
+        Entity& main_camera = ECS.entities[camera_test_id];
+        blendInCamera(main_camera, 2.f, CameraSystem::EPriority::GAMEPLAY);
+        std::cout << "blending camera" << std::endl;
     }
+
+    // TO-DO
+    // Add the blending camera to the spline
+    // Lerp between both tracks.
+
+    // Scripting LUA.
 }
 
-void CameraSystem::render()
+void CameraSystem::CameraMixed::blendIn(float duration)
 {
+    blendInTime = duration;
+    state = blendInTime == 0.f ? ST_IDLE : ST_BLENDING_IN;
+    time = 0.f;
+}
 
+void CameraSystem::CameraMixed::blendOut(float duration)
+{
+    blendOutTime = duration;
+    state = ST_BLENDING_OUT;
+    time = 0.f;
 }
 
 void CameraSystem::SetDefaultCamera(Entity & camera)
@@ -180,28 +191,27 @@ void CameraSystem::SetOutputCamera(Entity & camera)
     _outputCamera = camera;
 }
 
-int CameraSystem::GetOutputCamera()
+int CameraSystem::GetOutputCameraEntity()
 {
     return ECS.getEntity(_outputCamera.name);
 }
 
-int CameraSystem::GetDefaultCamera()
+int CameraSystem::GetDefaultCameraEntity()
 {
     return ECS.getEntity(_defaultCamera.name);
 }
 
-int CameraSystem::GetOutputCameraEntity()
+int CameraSystem::GetOutputCamera()
 {
     int main_camera_id = ECS.getEntity(_outputCamera.name);
     return ECS.getComponentID<Camera>(main_camera_id);
 }
 
-int CameraSystem::GetDefaultCameraEntity()
+int CameraSystem::GetDefaultCamera()
 {
-    int virtual_camera_id = ECS.getEntity(_defaultCamera.name);
-    return ECS.getComponentID<Camera>(virtual_camera_id);
+    int main_camera_id = ECS.getEntity(_defaultCamera.name);
+    return ECS.getComponentID<Camera>(main_camera_id);
 }
-
 
 // Start blending camera
 void CameraSystem::blendInCamera(Entity camera, float blendTime, EPriority priority, Interpolator::IInterpolator* interpolator)
@@ -230,25 +240,6 @@ void CameraSystem::blendOutCamera(Entity camera, float blendTime)
     }
 }
 
-// Blend the two cameras and output the result in the third one.
-void CameraSystem::blendCameras(const Camera* camera1, const Camera* camera2, float ratio, Camera* output) const
-{
-    assert(camera1 && camera2 && output);
-
-    // In case you want complex math function lerping, Apply interpolators instead.
-    lm::vec3 newPos = lm::Utils::lerp(camera1->position, camera2->position, ratio);
-    lm::vec3 newFront = lm::Utils::lerp(camera1->forward, camera2->forward, ratio);
-    float newFov = lm::Utils::lerp(camera1->fov, camera2->fov, ratio);
-    float newZnear = lm::Utils::lerp(camera1->near, camera2->near, ratio);
-    float newZfar = lm::Utils::lerp(camera1->far, camera2->far, ratio);
-
-    output->setPerspective(newFov, (float)Game::instance->window_width_ / (float)Game::instance->window_height_, newZnear, newZfar);
-    output->lookAt(newPos, newPos + newFront);
-}
-
-
-// Mixed struct methods for mixed cameras
-
 // Retrieve mixed camera
 CameraSystem::CameraMixed* CameraSystem::getMixedCamera(Entity camera)
 {
@@ -263,22 +254,27 @@ CameraSystem::CameraMixed* CameraSystem::getMixedCamera(Entity camera)
     return nullptr;
 }
 
-void CameraSystem::CameraMixed::blendIn(float duration)
+// Blend the two cameras and output the result in the third one.
+void CameraSystem::blendCameras(const Camera* camera1, const Camera* camera2, float ratio, Camera* output) const
 {
-    blendInTime = duration;
-    state = blendInTime == 0.f ? ST_IDLE : ST_BLENDING_IN;
-    time = 0.f;
+    assert(camera1 && camera2 && output);
+
+    lm::vec3 newPos = lm::Utils::lerp(camera1->position, camera2->position, ratio);
+    lm::vec3 newFront = lm::Utils::lerp(camera1->forward, camera2->forward, ratio);
+    float newFov = lm::Utils::lerp(camera1->fov, camera2->fov, ratio);
+    float newZnear = lm::Utils::lerp(camera1->near, camera2->near, ratio);
+    float newZfar = lm::Utils::lerp(camera1->far, camera2->far, ratio);
+
+    output->setPerspective(newFov, (float)Game::instance->window_width_ / (float)Game::instance->window_height_, newZnear, newZfar);
+    output->lookAt(newPos, newPos + newFront);
 }
 
-void CameraSystem::CameraMixed::blendOut(float duration)
+void CameraSystem::render()
 {
-    blendOutTime = duration;
-    state = ST_BLENDING_OUT;
-    time = 0.f;
+    // Render all dolly tracks.
+    // Get all components of dolly track type
+    // Render them.
 }
-
-// UI Debug purposes
-// Rendering the types of interpolation that we have in the ImGUI
 
 // Used to render splines in imgui
 void renderInterpolator(const char* name, Interpolator::IInterpolator& interpolator)

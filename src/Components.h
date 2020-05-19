@@ -18,8 +18,7 @@
 #include "includes.h"
 #include <vector>
 #include <functional>
-#include "curve.h"
-
+#include "Curve.h"
 /**** COMPONENTS ****/
 
 //Component (base class)
@@ -61,46 +60,48 @@ struct Mesh : public Component {
 struct Camera : public Component {
 
     lm::vec3 target;
-	lm::vec3 position;
-	lm::vec3 forward;
-	lm::vec3 up;
-	lm::mat4 view_matrix;
-	lm::mat4 projection_matrix;
-	lm::mat4 view_projection;
+    lm::vec3 position;
+    lm::vec3 forward;
+    lm::vec3 up;
+    lm::mat4 view_matrix;
+    lm::mat4 projection_matrix;
+    lm::mat4 view_projection;
 
     float fov, near, far;
 
-	//constructor that sets placeholder matrices
-	Camera() {
-		position = lm::vec3(0.0f, 0.0f, 1.0f); forward = lm::vec3(0.0f, 0.0f, -1.0f); up = lm::vec3(0.0f, 1.0f, 0.0f);
-		lm::vec3 target = position + forward;
-		view_matrix.lookAt(position, target, up);
-		projection_matrix.perspective(60.0f*DEG2RAD, 1, 0.01f, 100.0f);
-	}
+    //constructor that sets placeholder matrices
+    Camera() {
 
-	//sets view and projection matrices based on current position, view direction and up vector
-	void updateViewMatrix() {
-		forward.normalize();
-		lm::vec3 target = position + forward;
-		view_matrix.lookAt(position, target, up);
-	}
+        position = lm::vec3(0.0f, 0.0f, 1.0f); forward = lm::vec3(0.0f, 0.0f, -1.0f); up = lm::vec3(0.0f, 1.0f, 0.0f);
+        lm::vec3 target = position + forward;
+        view_matrix.lookAt(position, target, up);
+        projection_matrix.perspective(60.0f*DEG2RAD, 1, 0.01f, 100.0f);
+    }
 
-	//wraps orthographic projection matrix
-	void setOrthographic(float left, float right, float bottom, float top, float near, float far) {
+    //sets view and projection matrices based on current position, view direction and up vector
+    void updateViewMatrix() {
+
+        forward.normalize();
+        lm::vec3 target = position + forward;
+        view_matrix.lookAt(position, target, up);
+    }
+
+    //wraps orthographic projection matrix
+    void setOrthographic(float left, float right, float bottom, float top, float near, float far) {
 
         this->far = far;
         this->near = near;
-		projection_matrix.orthographic(left, right, bottom, top, near, far);
-	}
+        projection_matrix.orthographic(left, right, bottom, top, near, far);
+    }
 
-	//wraps perspective projection matrix
-	void setPerspective(float fov_rad, float aspect, float near, float far) {
+    //wraps perspective projection matrix
+    void setPerspective(float fov_rad, float aspect, float near, float far) {
 
         this->far = far;
         this->near = near;
         this->fov = fov_rad;
-		projection_matrix.perspective(fov_rad, aspect, near, far);
-	}
+        projection_matrix.perspective(fov_rad, aspect, near, far);
+    }
 
     //look at by view matrix
     void lookAt(lm::vec3 pos, lm::vec3 target) {
@@ -111,10 +112,11 @@ struct Camera : public Component {
         view_matrix.lookAt(position, target, up);
     }
 
-	void update() {
-		updateViewMatrix();
-		view_projection = projection_matrix * view_matrix;
-	}
+    void update() {
+
+        updateViewMatrix();
+        view_projection = projection_matrix * view_matrix;
+    }
 };
 
 enum LightType {
@@ -248,15 +250,16 @@ struct Animation : public Component {
     std::vector<lm::mat4> keyframes;
 };
 
-class ViewTrack : public Component
-{
+// Track class, to hold the path for the camera and its setings.
+class ViewTrack : public Component {
+
 private:
-    float ratio; // lerping
-    GLuint curve_vao_; // rendering
+    float ratio;
+    GLuint curve_vao_;
 
 public:
+    bool active = true;
 
-    float active = true;
     float speed;
     Curve curve;
 
@@ -296,7 +299,6 @@ template<> struct type2int<GUIElement> { enum { result = 5 }; };
 template<> struct type2int<GUIText> { enum { result = 6 }; };
 template<> struct type2int<Animation> { enum { result = 7 }; };
 template<> struct type2int<ViewTrack> { enum { result = 8 }; };
-
 //UPDATE THIS!
 const int NUM_TYPE_COMPONENTS = 8;
 

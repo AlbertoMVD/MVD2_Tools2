@@ -3,12 +3,14 @@
 #include "Components.h"
 #include "interpolators.h"
 
-class CameraSystem 
-{
+// Camera module, used to handle cameras and its actions
+class CameraSystem {
+
 public:
 
-    // Cameras have priorities to render on top of another depending on these.
-    enum EPriority { DEFAULT = 0, GAMEPLAY, TEMPORARY, DEBUG, NUM_PROPERTIES };
+    // Cameras have priorities, so a camera with higher priority must always be displayed in top of another.
+    enum EPriority { DEFAULT = 0, GAMEPLAY, TEMPORARY, DEBUG, NUM_PRIORITIES };
+
     CameraSystem();
 
     bool init();
@@ -16,12 +18,11 @@ public:
     bool stop();
     void update(float dt);
     void updateTest(float dt);
-
     void render();
 
     void checkDeprecated(); // remove temporal cameras that are finished
 
-    // Brain and virtual cinemachine model, default(brain) and output(virtual) camera
+    // Getters and setters for default and output cameras.
     void SetDefaultCamera(Entity & camera);
     void SetOutputCamera(Entity & camera);
 
@@ -30,12 +31,11 @@ public:
     int  GetOutputCameraEntity();
     int  GetDefaultCameraEntity();
 
-    // Blending camera functions
+    // Blending functions, in and out.
     void blendCameras(const Camera* camera1, const Camera* camera2, float ratio, Camera* output) const;
     void blendInCamera(Entity camera, float blendTime = 0.f, EPriority priority = EPriority::DEFAULT, Interpolator::IInterpolator* interpolator = nullptr);
     void blendOutCamera(Entity camera, float blendTime = 0.f);
 
-    // ImGUI stuff related.
     void renderInMenu();
 
 private:

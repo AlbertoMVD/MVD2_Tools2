@@ -18,6 +18,7 @@
 #include "includes.h"
 #include <vector>
 #include <functional>
+#include "curve.h"
 
 /**** COMPONENTS ****/
 
@@ -257,7 +258,7 @@ public:
 
     float active = true;
     float speed;
-    //Curve curve;
+    Curve curve;
 
     ViewTrack();
 

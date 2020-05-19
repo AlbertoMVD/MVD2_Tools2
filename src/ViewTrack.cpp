@@ -6,6 +6,7 @@
 #include "components.h"
 #include "extern.h"
 #include "Game.h"
+#include "Curve.h"
 
 ViewTrack::ViewTrack()
 {

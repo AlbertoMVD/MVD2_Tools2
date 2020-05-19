@@ -65,7 +65,7 @@ private:
 	//sorting and checking and abstracting
 	void sortMeshes_();
 	void resetShaderAndMaterial_();
-	void updateAllCameras_();
+	void updateAllCameras_(float dt);
 	void checkShaderAndMaterial_(Mesh& mesh);
     void checkMaterial_(Mesh& mesh);
 	

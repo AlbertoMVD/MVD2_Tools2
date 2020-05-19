@@ -5,6 +5,7 @@
 #include "Parsers.h"
 #include "extern.h"
 #include <algorithm>
+#include "Game.h"
 
 //destructor
 GraphicsSystem::~GraphicsSystem() {
@@ -79,7 +80,7 @@ void GraphicsSystem::lateInit() {
 
 void GraphicsSystem::update(float dt) {
     
-	updateAllCameras_();
+	updateAllCameras_(dt);
 
 	if (needUpdateLights)
 		updateLights_();
@@ -157,7 +158,7 @@ void GraphicsSystem::renderLightVolumes() {
     shader_->setTexture(U_TEX_POSITION, gbuffer_.color_textures[0], 8);
     shader_->setTexture(U_TEX_NORMAL, gbuffer_.color_textures[1], 9);
     shader_->setTexture(U_TEX_ALBEDO, gbuffer_.color_textures[2], 10);
-    shader_->setUniform(U_CAM_POS, ECS.getComponentInArray<Camera>(ECS.main_camera).position);
+    shader_->setUniform(U_CAM_POS, ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera()).position);
     
     glBlendFunc(GL_ONE, GL_ONE);
     glEnable(GL_BLEND);
@@ -201,7 +202,7 @@ void GraphicsSystem::renderLightVolumes() {
             model = rotate_matrix * model;
             model.translate(light_pos);
             
-            lm::mat4 view_projection = ECS.getComponentInArray<Camera>(ECS.main_camera).view_projection;
+            lm::mat4 view_projection = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera()).view_projection;
             lm::mat4 mvp = view_projection * model;
             shader_->setUniform(U_MVP, mvp);
             //draw
@@ -223,7 +224,7 @@ void GraphicsSystem::renderLightVolumes() {
         lm::mat4 model;
         model.scale(lights[i].radius, lights[i].radius, lights[i].radius);
         model.translate(light_pos);
-        lm::mat4 view_projection = ECS.getComponentInArray<Camera>(ECS.main_camera).view_projection;
+        lm::mat4 view_projection = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera()).view_projection;
         lm::mat4 mvp = view_projection * model;
         shader_->setUniform(U_MVP, mvp);
         
@@ -262,7 +263,7 @@ void GraphicsSystem::renderGbuffer() {
     shader_->setTexture(U_TEX_POSITION, gbuffer_.color_textures[0], 8);
     shader_->setTexture(U_TEX_NORMAL, gbuffer_.color_textures[1], 9);
     shader_->setTexture(U_TEX_ALBEDO, gbuffer_.color_textures[2], 10);
-    shader_->setUniform(U_CAM_POS, ECS.getComponentInArray<Camera>(ECS.main_camera).position);
+    shader_->setUniform(U_CAM_POS, ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera()).position);
     
     //draw
     geometries_[screen_space_geom_].render();
@@ -292,7 +293,7 @@ void GraphicsSystem::renderMeshComponent_(Mesh& comp) {
 
 	//get components and geom
 	Transform& transform = ECS.getComponentFromEntity<Transform>(comp.owner);
-	Camera& cam = ECS.getComponentInArray<Camera>(ECS.main_camera);
+	Camera& cam = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera());
 	Geometry& geom = geometries_[comp.geometry];
 
 	//create mvp
@@ -340,7 +341,7 @@ void GraphicsSystem::renderEnvironment_() {
     useShader(environment_program_);
     
     //get camera
-    Camera& cam = ECS.getComponentInArray<Camera>(ECS.main_camera);
+    Camera& cam = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera());
         
     //view projection matrix, zeroing out
     lm::mat4 view_matrix = cam.view_matrix;
@@ -566,10 +567,14 @@ void GraphicsSystem::resetShaderAndMaterial_() {
 }
 
 //update cameras
-void GraphicsSystem::updateAllCameras_() {
+void GraphicsSystem::updateAllCameras_(float dt) {
 
 	auto& cameras = ECS.getAllComponents<Camera>();
 	for (auto &cam : cameras) cam.update();
+
+    // Update all the viewtrack paths
+    auto& tracks = ECS.getAllComponents<ViewTrack>();
+    for (auto &track : tracks) track.update(dt);
 }
 
 void GraphicsSystem::bindAndClearScreen_() {

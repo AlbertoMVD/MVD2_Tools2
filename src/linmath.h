@@ -6,6 +6,7 @@
 #pragma once
 #include <cmath> //for sqrt (square root) function
 #define DEG2RAD 0.0174532925f
+#include <algorithm>
 
 namespace lm {
 

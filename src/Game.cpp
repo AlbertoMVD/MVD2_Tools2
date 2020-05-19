@@ -13,6 +13,7 @@ Game* Game::instance = 0;
 
 Game::Game() {
 
+    instance = this;
 }
 
 //Nothing here yet
@@ -28,6 +29,7 @@ void Game::init(int w, int h) {
     script_system_.init(&control_system_);
 	gui_system_.init(window_width_, window_height_);
     animation_system_.init();
+    camera_system_.init();
 
 	/******** SHADERS **********/
 
@@ -48,7 +50,6 @@ void Game::init(int w, int h) {
     plane_mesh.geometry = graphics_system_.createGeometryFromFile("data/assets/plane_20x20.obj");
     plane_mesh.material = ball_mesh.material;
     
-    
     int light_ent = ECS.createEntity("Light");
     Light& light = ECS.createComponentForEntity<Light>(light_ent);
     //ECS.getComponentFromEntity<Transform>(light_ent).position(100, 100, 100);
@@ -56,22 +57,26 @@ void Game::init(int w, int h) {
     light.type = LightTypeDirectional;
 
 	//create camera
-	createFreeCamera_();
+    Parsers::parseJSONLevel("data/assets/cameras.json", graphics_system_, control_system_);
+    createFreeCamera_();
     
     //******* LATE INIT AFTER LOADING RESOURCES *******//
     graphics_system_.lateInit();
     script_system_.lateInit();
     animation_system_.lateInit();
     debug_system_.lateInit();
+    camera_system_.lateInit();
 
-	debug_system_.setActive(false);
-
+	debug_system_.setActive(true);
 }
 
 //update each system in turn
 void Game::update(float dt) {
 
 	if (ECS.getAllComponents<Camera>().size() == 0) {print("There is no camera set!"); return;}
+
+    //camera
+    camera_system_.update(dt);
 
 	//update input
 	control_system_.update(dt);

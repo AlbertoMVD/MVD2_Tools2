@@ -624,34 +624,57 @@ bool Parsers::parseJSONLevel(std::string filename,
     }
     
     //cameras
-	if (json.HasMember("cameras")) {
-		for (rapidjson::SizeType i = 0; i < json["cameras"].Size(); i++) {
-			const std::string name = json["cameras"][i]["name"].GetString();
-			const std::string type = json["cameras"][i]["name"].GetString();
-			const std::string movement = json["cameras"][i]["movement"].GetString();
-			auto& jp = json["cameras"][i]["position"];
-			auto& jd = json["cameras"][i]["direction"];
-			const float fov = json["cameras"][i]["fov"].GetFloat();
-			const float near = json["cameras"][i]["near"].GetFloat();
-			const float far = json["cameras"][i]["far"].GetFloat();
+    if (json.HasMember("cameras")) {
+        for (rapidjson::SizeType i = 0; i < json["cameras"].Size(); i++) {
+            const std::string name = json["cameras"][i]["name"].GetString();
+            const std::string type = json["cameras"][i]["name"].GetString();
+            const std::string movement = json["cameras"][i]["movement"].GetString();
+            auto& jp = json["cameras"][i]["position"];
+            auto& jd = json["cameras"][i]["direction"];
+            const float fov = json["cameras"][i]["fov"].GetFloat();
+            const float near = json["cameras"][i]["near"].GetFloat();
+            const float far = json["cameras"][i]["far"].GetFloat();
 
-			int vp_w, vp_h; //get viewport dims from graphics system
-			graphics_system.getMainViewport(vp_w, vp_h);
+            int vp_w, vp_h; //get viewport dims from graphics system
+            graphics_system.getMainViewport(vp_w, vp_h);
 
+            //if (movement == "free") {
+            int ent_player = ECS.createEntity(name);
+            Camera& player_cam = ECS.createComponentForEntity<Camera>(ent_player);
+            lm::vec3 the_position(jp[0].GetFloat(), jp[1].GetFloat(), jp[2].GetFloat());
+            ECS.getComponentFromEntity<Transform>(ent_player).translate(the_position);
+            player_cam.position = the_position;
+            player_cam.forward = lm::vec3(jd[0].GetFloat(), jd[1].GetFloat(), jd[2].GetFloat());
 
-			if (movement == "free") {
-				int ent_player = ECS.createEntity("PlayerFree");
-				Camera& player_cam = ECS.createComponentForEntity<Camera>(ent_player);
-				lm::vec3 the_position(jp[0].GetFloat(), jp[1].GetFloat(), jp[2].GetFloat());
-				ECS.getComponentFromEntity<Transform>(ent_player).translate(the_position);
-				player_cam.position = the_position;
-				player_cam.forward = lm::vec3(jd[0].GetFloat(), jd[1].GetFloat(), jd[2].GetFloat());
-				player_cam.setPerspective(fov*DEG2RAD, (float)vp_w / (float)vp_h, near, far);
-				ECS.main_camera = ECS.getComponentID<Camera>(ent_player);
-				control_system.control_type = ControlTypeFree;
-			}
-		}
-	}
+            if (json["cameras"][i].HasMember("target"))
+            {
+                auto& tg = json["cameras"][i]["target"];
+                lm::vec3 the_target(tg[0].GetFloat(), tg[1].GetFloat(), tg[2].GetFloat());
+                player_cam.forward = (the_target - the_position).normalize();
+                player_cam.target = the_target;
+            }
+
+            player_cam.setPerspective(fov*DEG2RAD, (float)vp_w / (float)vp_h, near, far);
+            ECS.main_camera = ECS.getComponentID<Camera>(ent_player);
+            control_system.control_type = ControlTypeFree;
+
+            // Parse the track component.
+            //if (json["cameras"][i].HasMember("track"))
+            //{
+            //    auto& tspeed = json["cameras"][i]["track"]["speed"];
+            //    ViewTrack& cam_track = ECS.createComponentForEntity<ViewTrack>(ent_player);
+
+            //    for (rapidjson::SizeType j = 0; j < json["cameras"][i]["track"]["knots"].Size(); j++) {
+            //        auto& jknots = json["cameras"][i]["track"]["knots"][j];
+            //        lm::vec3 knot = lm::vec3(jknots[0].GetFloat(), jknots[1].GetFloat(), jknots[2].GetFloat());
+            //        cam_track.curve._knots.push_back(knot);
+            //    }
+            //    cam_track.curve._knots.insert(cam_track.curve._knots.begin(), cam_track.curve._knots[0]);
+            //    cam_track.curve._knots.push_back(cam_track.curve._knots.back());
+            //    cam_track.speed = tspeed.GetFloat();
+            //}
+        }
+    }
     
     //textures
     for (rapidjson::SizeType i = 0; i < json["textures"].Size(); i++) {

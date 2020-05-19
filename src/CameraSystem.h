@@ -19,6 +19,8 @@ public:
 
     void render();
 
+    void checkDeprecated(); // remove temporal cameras that are finished
+
     // Brain and virtual cinemachine model, default(brain) and output(virtual) camera
     void SetDefaultCamera(Entity & camera);
     void SetOutputCamera(Entity & camera);

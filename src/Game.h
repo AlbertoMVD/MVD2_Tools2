@@ -13,7 +13,7 @@
 #include "ScriptSystem.h"
 #include "GUISystem.h"
 #include "AnimationSystem.h"
-
+#include "CameraSystem.h"
 
 class Game
 {
@@ -51,12 +51,15 @@ public:
 	}
 	void update_viewports(int window_width, int window_height);
 
+    // Refactor this afterwards.
+    CameraSystem camera_system_;
+    ControlSystem control_system_;
+
     int window_width_;
     int window_height_;
 
 private:
 	GraphicsSystem graphics_system_;
-	ControlSystem control_system_;
     DebugSystem debug_system_;
     CollisionSystem collision_system_;
     ScriptSystem script_system_;

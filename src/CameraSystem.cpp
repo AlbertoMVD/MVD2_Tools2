@@ -50,6 +50,103 @@ void CameraSystem::update(float dt)
         Transform& c_trans = ECS.getComponentFromEntity<Transform>(e.name);
         c_trans.position(resultCamera.position);
     }
+
+    // Get all the cameras in priority order, so gameplay is first.
+    for (int i = 0; i < NUM_PROPERTIES; ++i)
+    {
+        for (auto& mc : _mixedCameras)
+        {
+            if (mc.type != i)
+                continue;
+
+            // This part controls when the blending is done after checking the delta time
+            mc.time += dt;
+            if (mc.state == CameraMixed::ST_BLENDING_IN)
+            {
+                mc.weight = lm::Utils::clamp(mc.time / mc.blendInTime, 0.f, 1.f);
+                if (mc.weight >= 1.f)
+                {
+                    mc.state = CameraMixed::ST_IDLE;
+                    mc.time = 0.f;
+                }
+            }
+            else if (mc.state == CameraMixed::ST_BLENDING_OUT)
+            {
+                mc.weight = 1.f - lm::Utils::clamp(mc.time / mc.blendOutTime, 0.f, 1.f);
+            }
+
+            // Blend camera with the mixed camera in case it hasn't finished yet.
+            if (mc.weight > 0.f)
+            {
+                float ratio = mc.weight;
+                if (mc.interpolator)
+                    ratio = mc.interpolator->blend(0.f, 1.f, ratio);
+
+                // blend them
+                Entity e = mc.camera;
+                Camera& c_camera = ECS.getComponentFromEntity<Camera>(e.name);
+                blendCameras(&resultCamera, &c_camera, ratio, &resultCamera);
+
+                Transform& c_trans = ECS.getComponentFromEntity<Transform>(e.name);
+                c_trans.position(resultCamera.position);
+            }
+        }
+
+        // Remove temporal mixed cameras
+        checkDeprecated();
+
+        // remove deprecated ones
+        {
+            std::vector<CameraMixed>::iterator it = _mixedCameras.begin();
+            while (it != _mixedCameras.end())
+            {
+                if (it->weight <= 0.f)
+                    it = _mixedCameras.erase(it);
+                else
+                    ++it;
+            }
+        }
+
+        // save the result into the main camera (output camera)
+        if (_outputCamera.isValid())
+        {
+            Entity e = _outputCamera;
+            Camera& c_camera = ECS.getComponentFromEntity<Camera>(e.name);
+            blendCameras(&resultCamera, &resultCamera, 1.f, &c_camera);
+
+            Transform& c_trans = ECS.getComponentFromEntity<Transform>(e.name);
+            c_trans.position(c_camera.position);
+
+        }
+    }
+}
+
+// Check if a camera is already done.
+void CameraSystem::checkDeprecated()
+{
+    // checks if there are cameras that should be removed
+    for (int i = _mixedCameras.size() - 1; i >= 0; --i)
+    {
+        CameraMixed& mc = _mixedCameras[i];
+        if (mc.type == GAMEPLAY && mc.weight >= 1.f)
+        {
+            if (mc.type == GAMEPLAY)
+            {
+                mc.weight = 0.f;
+
+                Entity e1 = _outputCamera;
+                Camera& c_camera1 = ECS.getComponentFromEntity<Camera>(e1.name);
+
+                Entity e2 = _defaultCamera;
+                Camera & c_camera2 = ECS.getComponentFromEntity<Camera>(e2.name);
+
+                Transform& c_trans = ECS.getComponentFromEntity<Transform>(e2.name);
+                c_trans.position(c_camera1.position);
+
+                blendCameras(&c_camera1, &c_camera1, 1.f, &c_camera2);
+            }
+        }
+    }
 }
 
 void CameraSystem::updateTest(float dt)
@@ -66,30 +163,34 @@ void CameraSystem::render()
 
 void CameraSystem::SetDefaultCamera(Entity & camera)
 {
+    _defaultCamera = camera;
 }
 
 void CameraSystem::SetOutputCamera(Entity & camera)
 {
+    _outputCamera = camera;
 }
 
 int CameraSystem::GetOutputCamera()
 {
-    return 0;
+    return ECS.getEntity(_outputCamera.name);
 }
 
 int CameraSystem::GetDefaultCamera()
 {
-    return 0;
+    return ECS.getEntity(_defaultCamera.name);
 }
 
 int CameraSystem::GetOutputCameraEntity()
 {
-    return 0;
+    int main_camera_id = ECS.getEntity(_outputCamera.name);
+    return ECS.getComponentID<Camera>(main_camera_id);
 }
 
 int CameraSystem::GetDefaultCameraEntity()
 {
-    return 0;
+    int virtual_camera_id = ECS.getEntity(_defaultCamera.name);
+    return ECS.getComponentID<Camera>(virtual_camera_id);
 }
 
 

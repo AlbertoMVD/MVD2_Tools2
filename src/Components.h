@@ -263,7 +263,7 @@ public:
     ViewTrack();
 
     void update(float dt);
-    void render(float dt);
+    void render(GLuint prog);
 
     void GenerateMesh();
 };

@@ -659,20 +659,20 @@ bool Parsers::parseJSONLevel(std::string filename,
             control_system.control_type = ControlTypeFree;
 
             // Parse the track component.
-            //if (json["cameras"][i].HasMember("track"))
-            //{
-            //    auto& tspeed = json["cameras"][i]["track"]["speed"];
-            //    ViewTrack& cam_track = ECS.createComponentForEntity<ViewTrack>(ent_player);
+            if (json["cameras"][i].HasMember("track"))
+            {
+                auto& tspeed = json["cameras"][i]["track"]["speed"];
+                ViewTrack& cam_track = ECS.createComponentForEntity<ViewTrack>(ent_player);
 
-            //    for (rapidjson::SizeType j = 0; j < json["cameras"][i]["track"]["knots"].Size(); j++) {
-            //        auto& jknots = json["cameras"][i]["track"]["knots"][j];
-            //        lm::vec3 knot = lm::vec3(jknots[0].GetFloat(), jknots[1].GetFloat(), jknots[2].GetFloat());
-            //        cam_track.curve._knots.push_back(knot);
-            //    }
-            //    cam_track.curve._knots.insert(cam_track.curve._knots.begin(), cam_track.curve._knots[0]);
-            //    cam_track.curve._knots.push_back(cam_track.curve._knots.back());
-            //    cam_track.speed = tspeed.GetFloat();
-            //}
+                for (rapidjson::SizeType j = 0; j < json["cameras"][i]["track"]["knots"].Size(); j++) {
+                    auto& jknots = json["cameras"][i]["track"]["knots"][j];
+                    lm::vec3 knot = lm::vec3(jknots[0].GetFloat(), jknots[1].GetFloat(), jknots[2].GetFloat());
+                    cam_track.curve._knots.push_back(knot);
+                }
+                cam_track.curve._knots.insert(cam_track.curve._knots.begin(), cam_track.curve._knots[0]);
+                cam_track.curve._knots.push_back(cam_track.curve._knots.back());
+                cam_track.speed = tspeed.GetFloat();
+            }
         }
     }
     

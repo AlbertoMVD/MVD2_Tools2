@@ -58,7 +58,7 @@ void Game::init(int w, int h) {
 
 	//create camera
     Parsers::parseJSONLevel("data/assets/cameras.json", graphics_system_, control_system_);
-    createFreeCamera_();
+    //createFreeCamera_();
     
     //******* LATE INIT AFTER LOADING RESOURCES *******//
     graphics_system_.lateInit();
@@ -115,6 +115,7 @@ void Game::update_viewports(int window_width, int window_height) {
 
 
 int Game::createFreeCamera_() {
+
 	int ent_player = ECS.createEntity("PlayerFree");
 	Camera& player_cam = ECS.createComponentForEntity<Camera>(ent_player);
 	lm::vec3 the_position(25.325f, 17.425f, -23.141f);;

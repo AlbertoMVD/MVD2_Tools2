@@ -33,6 +33,8 @@
     <ClCompile Include="..\src\GraphicsUtilities.cpp" />
     <ClCompile Include="..\src\AnimationSystem.cpp" />
     <ClCompile Include="..\src\CameraSystem.cpp" />
+    <ClCompile Include="..\src\ViewTrack.cpp" />
+    <ClCompile Include="..\src\Curve.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CollisionSystem.h" />
@@ -78,6 +80,7 @@
     <ClInclude Include="..\src\AnimationSystem.h" />
     <ClInclude Include="..\src\CameraSystem.h" />
     <ClInclude Include="..\src\interpolators.h" />
+    <ClInclude Include="..\src\Curve.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imGui">

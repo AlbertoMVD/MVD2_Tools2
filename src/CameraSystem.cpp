@@ -154,6 +154,15 @@ void CameraSystem::updateTest(float dt)
     // TO-DO
     // Add lerps and transitions between scene cameras
     // Create the cinematic code here.
+
+    // Press key 0 and blend to camera1
+    if (Game::instance->control_system_.input[GLFW_KEY_0])
+    {
+        int camera_test_1 = ECS.getEntity("camera_test1");
+        Entity& camera1 = ECS.entities[camera_test_1];
+        blendInCamera(camera1, 2.f, CameraSystem::EPriority::GAMEPLAY);
+        std::cout << "Blending camera zero" << std::endl;
+    }
 }
 
 void CameraSystem::render()

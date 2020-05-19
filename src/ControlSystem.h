@@ -48,11 +48,11 @@ public:
 	float FPS_gravity = 9.8f;
 	float FPS_height = 2.0f;
 
+    bool input[GLFW_KEY_LAST];
+
 private:
 	float move_speed_ = 10.0f;
 	float turn_speed_ = 2.3f;
-
-	bool input[GLFW_KEY_LAST];
 
 	//function to update entity movement
 	void updateFree(float dt);

@@ -13,6 +13,13 @@ void Geometry::render() {
 	glBindVertexArray(0);
 }
 
+void Geometry::drawLine(lm::vec3 orig, lm::vec3 dest)
+{
+    glBegin(GL_LINES);
+    glVertex3f(orig.x, orig.y, orig.z);
+    glVertex3f(dest.x, dest.y, dest.z);
+    glEnd();
+}
 
 void Geometry::render(int set) {
     //bind the vao

@@ -2,6 +2,7 @@
 #include "extern.h"
 #include "Parsers.h"
 #include "shaders_default.h"
+#include "Game.h"
 
 DebugSystem::~DebugSystem() {
 	delete grid_shader_;
@@ -43,6 +44,59 @@ void DebugSystem::lateInit() {
 	picking_ray.max_distance = 0.001f;
 
 	setActive(true);
+
+    // Get our viewtracks and set a VBO 
+    std::vector<float> track_vertices;
+    std::vector<GLuint> track_indices;
+
+    int index = 0;
+    auto& view_tracks = ECS.getAllComponents<ViewTrack>();
+
+    for (auto& cc : view_tracks) {
+
+        // We have a path track
+        if (cc.curve._knots.size() > 1)
+        {
+            for (unsigned int i = 0; i < cc.curve._knots.size(); i++)
+            {
+                track_vertices.push_back(cc.curve._knots[i].x);
+                track_vertices.push_back(cc.curve._knots[i].y);
+                track_vertices.push_back(cc.curve._knots[i].z);
+
+                if(i > 0)
+                {
+                    track_indices.push_back(index + i - 1);
+                    track_indices.push_back(index + i);
+                }
+            }
+        }
+
+        index += cc.curve._knots.size();
+    }
+
+    GLuint* track_line_indices = &track_indices[0]; // Hardcoded size, we might have some limitations here...
+    curve_num_indices = track_indices.size();
+
+    //gl buffers
+    glGenVertexArrays(1, &curve_vao_);
+    glBindVertexArray(curve_vao_);
+
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, track_vertices.size() * sizeof(float), track_vertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    //indices
+    GLuint ibo;
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, track_indices.size() * sizeof(GLuint), track_indices.data(), GL_STATIC_DRAW);
+
+    //unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
 //draws debug information or not
@@ -57,7 +111,8 @@ void DebugSystem::setActive(bool a) {
 void DebugSystem::update(float dt) {
 
 	//get the camera view projection matrix
-	lm::mat4 vp = ECS.getComponentInArray<Camera>(ECS.main_camera).view_projection;
+	lm::mat4 vp = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera()).view_projection;
+    Geometry::drawLine(lm::vec3(0, 0, 0), lm::vec3(0, 10, 0));
 
 	//line drawing first
 	if (draw_grid_ || draw_frustra_ || draw_colliders_) {
@@ -70,8 +125,6 @@ void DebugSystem::update(float dt) {
 		GLint u_size_scale = glGetUniformLocation(grid_shader_->program, "u_size_scale");
 		GLint u_center_mod = glGetUniformLocation(grid_shader_->program, "u_center_mod");
 
-
-
 		if (draw_grid_) {
 			//set uniforms and draw grid
 			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, vp.m);
@@ -83,15 +136,36 @@ void DebugSystem::update(float dt) {
 			glDrawElements(GL_LINES, grid_num_indices, GL_UNSIGNED_INT, 0);
 		}
 
+
+        {
+            //set uniforms and draw grid
+            glUniformMatrix4fv(u_mvp, 1, GL_FALSE, vp.m);
+            glUniform3fv(u_color, 4, grid_colors);
+            glUniform3f(u_size_scale, 1.0, 1.0, 1.0);
+            glUniform3f(u_center_mod, 0.0, 0.0, 0.0);
+            glUniform1i(u_color_mod, 3);
+            glBindVertexArray(curve_vao_); //TRACKS
+            glDrawElements(GL_LINES, curve_num_indices, GL_UNSIGNED_INT, 0);
+        }
+
+        //auto& tracks = ECS.getAllComponents<ViewTrack>();
+        //for (auto& track : tracks)
+        //    track.render(grid_shader_->program);
+
 		if (draw_frustra_) {
 			//draw frustra for all cameras
 			auto& cameras = ECS.getAllComponents<Camera>();
-            int counter = 0;
+            int main_output = Game::instance->camera_system_.GetOutputCameraEntity();
+            int main_default  = Game::instance->camera_system_.GetDefaultCameraEntity();
+
 			for (auto& cc : cameras) {
+
                 //don't draw current camera frustum
-                if (counter == ECS.main_camera) continue;
-                counter++;
-                
+                if (cc.owner == main_output || cc.owner == main_default) continue;
+
+                float old_far = cc.far;
+                cc.setPerspective(cc.fov, (float)Game::instance->window_width_ / (float)Game::instance->window_height_,cc.near, 2);
+                cc.update();
 				lm::mat4 cam_iv = cc.view_matrix;
 				cam_iv.inverse();
 				lm::mat4 cam_ip = cc.projection_matrix;
@@ -105,6 +179,8 @@ void DebugSystem::update(float dt) {
 				glUniform1i(u_color_mod, 1); //set color to index 1 (red)
 				glBindVertexArray(cube_vao_); //CUBE
 				glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+                cc.setPerspective(cc.fov, (float)Game::instance->window_width_ / (float)Game::instance->window_height_, cc.near, old_far);
+                cc.update();
 			}
 
 			//now for lights
@@ -223,20 +299,6 @@ void DebugSystem::update(float dt) {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, icon_camera_texture_);
 
-		//for each camera, exactly the same but with camera texture
-		auto& cameras = ECS.getAllComponents<Camera>();
-		for (auto& curr_camera : cameras) {
-			Transform& curr_cam_transform = ECS.getComponentFromEntity<Transform>(curr_camera.owner);
-			lm::mat4 mvp_matrix = vp * curr_cam_transform.getGlobalMatrix(ECS.getAllComponents<Transform>());
-
-			// billboard as above
-			lm::mat4 bill_matrix;
-			for (int i = 12; i < 16; i++) bill_matrix.m[i] = mvp_matrix.m[i];
-			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, bill_matrix.m);
-			glBindVertexArray(icon_vao_);
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		}
 	}
 	glBindVertexArray(0);
 
@@ -298,25 +360,25 @@ void DebugSystem::updateimGUI_(float dt) {
 
 		//Tell imGUI to display variables of the camera
 		//get camera and its transform
-		Camera& cam = ECS.getComponentInArray<Camera>(ECS.main_camera);
+		Camera& cam = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera());
 		Transform& cam_transform = ECS.getComponentFromEntity<Transform>(cam.owner);
 
 		//Create an unfoldable tree node called 'Camera'
-		if (ImGui::TreeNode("Camera")) {
-			//create temporary arrays with position and direction data
-			float cam_pos_array[3] = { cam.position.x, cam.position.y, cam.position.z };
-			float cam_dir_array[3] = { cam.forward.x, cam.forward.y, cam.forward.z };
+		//if (ImGui::TreeNode("Camera")) {
+		//	//create temporary arrays with position and direction data
+		//	float cam_pos_array[3] = { cam.position.x, cam.position.y, cam.position.z };
+		//	float cam_dir_array[3] = { cam.forward.x, cam.forward.y, cam.forward.z };
 
-			//create imGUI components that allow us to change the values when click-dragging
-			ImGui::DragFloat3("Position", cam_pos_array);
-			ImGui::DragFloat3("Direction", cam_dir_array);
+		//	//create imGUI components that allow us to change the values when click-dragging
+		//	ImGui::DragFloat3("Position", cam_pos_array);
+		//	ImGui::DragFloat3("Direction", cam_dir_array);
 
-			//use values of temporary arrays to set real values (in case user changes)
-			cam.position = lm::vec3(cam_pos_array[0], cam_pos_array[1], cam_pos_array[2]);
-			cam_transform.position(cam.position);
-			cam.forward = lm::vec3(cam_dir_array[0], cam_dir_array[1], cam_dir_array[2]).normalize();
-			ImGui::TreePop();
-		}
+		//	//use values of temporary arrays to set real values (in case user changes)
+		//	cam.position = lm::vec3(cam_pos_array[0], cam_pos_array[1], cam_pos_array[2]);
+		//	cam_transform.position(cam.position);
+		//	cam.forward = lm::vec3(cam_dir_array[0], cam_dir_array[1], cam_dir_array[2]).normalize();
+		//	ImGui::TreePop();
+		//}
 
 		//create a tree of TransformNodes objects (defined in DebugSystem.h)
         //which represents the current scene graph
@@ -387,6 +449,7 @@ void DebugSystem::updateimGUI_(float dt) {
 			ImGui::TextColored(ImVec4(1, 1, 0, 1), ECS.entities[picked_collider.owner].name.c_str());
 		}
 
+        Game::instance->camera_system_.renderInMenu();
 
 		ImGui::End();
 
@@ -411,7 +474,7 @@ void DebugSystem::setPickingRay(int mouse_x, int mouse_y, int screen_width, int 
 	lm::vec4 mouse_near_plane(ndc_x, ndc_y, -1.0, 1.0);
 	
     //get view projection
-    Camera& cam = ECS.getComponentInArray<Camera>(ECS.main_camera);
+    Camera& cam = ECS.getComponentInArray<Camera>(Game::instance->camera_system_.GetOutputCamera());
 	lm::mat4 inv_vp = cam.view_projection;
 	inv_vp.inverse();
 

@@ -65,6 +65,12 @@ private:
 		0.5f, 1.0f, 0.5f, //green
 		0.5f, 0.5f, 1.0f }; //blue
 
+    float path_colors[3] = {
+        0.5f, 0.5f, 1.0f }; //blue
+
+    GLuint curve_vao_;
+    GLuint curve_num_indices;
+
 							//shaders
 	Shader* grid_shader_;
 	Shader* icon_shader_;

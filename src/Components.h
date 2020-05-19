@@ -247,6 +247,26 @@ struct Animation : public Component {
     std::vector<lm::mat4> keyframes;
 };
 
+class ViewTrack : public Component
+{
+private:
+    float ratio; // lerping
+    GLuint curve_vao_; // rendering
+
+public:
+
+    float active = true;
+    float speed;
+    //Curve curve;
+
+    ViewTrack();
+
+    void update(float dt);
+    void render(float dt);
+
+    void GenerateMesh();
+};
+
 /**** COMPONENT STORAGE ****/
 
 //add new component type vectors here to store them in *ECS*
@@ -258,7 +278,8 @@ std::vector<Light>,
 std::vector<Collider>,
 std::vector<GUIElement>,
 std::vector<GUIText>,
-std::vector<Animation>
+std::vector<Animation>,
+std::vector<ViewTrack>
 > ComponentArrays;
 
 //way of mapping different types to an integer value i.e.
@@ -273,6 +294,8 @@ template<> struct type2int<Collider> { enum { result = 4 }; };
 template<> struct type2int<GUIElement> { enum { result = 5 }; };
 template<> struct type2int<GUIText> { enum { result = 6 }; };
 template<> struct type2int<Animation> { enum { result = 7 }; };
+template<> struct type2int<ViewTrack> { enum { result = 8 }; };
+
 //UPDATE THIS!
 const int NUM_TYPE_COMPONENTS = 8;
 

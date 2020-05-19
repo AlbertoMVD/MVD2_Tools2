@@ -57,6 +57,7 @@ struct Geometry {
     void createMaterialSet(int tri_count, int material_id);
     void render();
 
+    static void drawLine(lm::vec3 orig, lm::vec3 dest);
 };
 
 struct Material {
